@@ -1,0 +1,21 @@
+import Link from "next/link";
+import { ArrowUpRight, CalendarDays, Flame, Plus, Target } from "lucide-react";
+import { format } from "date-fns";
+import { prisma } from "@/lib/prisma";
+import { getDemoUser } from "@/lib/user";
+import { ActivityHeatmap } from "@/components/ActivityHeatmap";
+import { HabitCard } from "@/components/HabitCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
+export const dynamic = "force-dynamic";
+
+export default async function Dashboard() {
+  const user = await getDemoUser(); const habits = await prisma.habit.findMany({ where: { userId: user.id, archived: false }, include: { completions: true }, orderBy: { createdAt: "asc" } }); const today = format(new Date(), "yyyy-MM-dd"); const todayDone = habits.filter((habit) => (habit.completions.find((item) => format(item.date, "yyyy-MM-dd") === today)?.completionCount ?? 0) >= habit.targetCount).length; const allCompletions = habits.flatMap((habit) => habit.completions.map((completion) => ({ ...completion, habitId: habit.id, habitTitle: habit.title }))); const total = allCompletions.reduce((sum, completion) => sum + completion.completionCount, 0);
+  return <main className="page-shell"><header className="flex items-center justify-between border-b pb-5"><Link href="/" className="flex items-center gap-2 font-display text-xl font-bold"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime text-white">G</span>GreenStreak</Link><div className="flex items-center gap-3"><ThemeToggle /><Link href="/habits/new" className="button-primary"><Plus size={17} /> <span className="hidden sm:inline">New habit</span></Link></div></header>
+    <section className="relative overflow-hidden py-12 sm:py-16"><div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-lime/10 blur-3xl" /><p className="label">{format(new Date(), "EEEE, MMMM d")}</p><h1 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-6xl">Small actions.<br /><span className="text-lime">Visible progress.</span></h1><p className="mt-5 max-w-lg text-base leading-7 text-muted">A calm place to keep promises to yourself, one checked box at a time.</p></section>
+    <section className="mb-10 grid gap-4 sm:grid-cols-3"><Stat icon={<Target size={18} />} value={`${todayDone}/${habits.length}`} label="Today complete" /><Stat icon={<Flame size={18} />} value={String(total)} label="Total completions" /><Stat icon={<CalendarDays size={18} />} value={habits.length ? `${Math.round((todayDone / habits.length) * 100)}%` : "0%"} label="Daily rhythm" /></section>
+    <section className="mb-10"><ActivityHeatmap completions={allCompletions} targetCount={Math.max(1, habits.reduce((sum, habit) => sum + habit.targetCount, 0))} /></section>
+    <section><div className="mb-4 flex items-end justify-between"><div><p className="label">Today’s focus</p><h2 className="mt-1 font-display text-2xl font-bold">Your habits</h2></div><span className="text-sm text-muted">{habits.length} active</span></div><div className="grid gap-4 sm:grid-cols-2">{habits.length ? habits.map((habit) => <HabitCard key={habit.id} habit={{ ...habit, todayCount: habit.completions.find((item) => format(item.date, "yyyy-MM-dd") === today)?.completionCount ?? 0 }} />) : <div className="panel p-8 text-center sm:col-span-2"><p className="font-display text-lg font-bold">Your first streak starts here.</p><Link href="/habits/new" className="button-primary mt-5"><Plus size={16} /> Create a habit</Link></div>}</div></section>
+    <footer className="mt-12 flex justify-between border-t pt-5 text-xs text-muted"><span>Built for the long game.</span><span>{habits.length ? <Link className="inline-flex items-center gap-1 hover:text-ink" href={`/habits/${habits[0].id}`}>Explore analytics <ArrowUpRight size={13} /></Link> : "Start your rhythm"}</span></footer></main>;
+}
+function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) { return <div className="panel flex items-center gap-4 p-5"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-lime/15 text-lime">{icon}</span><div><p className="font-display text-2xl font-bold">{value}</p><p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p></div></div>; }

@@ -1,0 +1,1 @@
+// The renderer does not need privileged APIs; context isolation stays enabled.

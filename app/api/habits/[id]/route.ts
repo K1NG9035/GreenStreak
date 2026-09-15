@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getDemoUser } from "@/lib/user";
+
+export async function GET(_: Request, { params }: { params: { id: string } }) { const user = await getDemoUser(); const habit = await prisma.habit.findFirst({ where: { id: params.id, userId: user.id }, include: { completions: { orderBy: { date: "asc" } } } }); return habit ? NextResponse.json(habit) : NextResponse.json({ error: "Not found" }, { status: 404 }); }
+export async function PATCH(request: Request, { params }: { params: { id: string } }) { const user = await getDemoUser(); const body = await request.json(); const habit = await prisma.habit.updateMany({ where: { id: params.id, userId: user.id }, data: { title: body.title, description: body.description ?? "", category: body.category ?? "Personal", frequency: body.frequency === "WEEKLY" ? "WEEKLY" : "DAILY", targetCount: Math.max(1, Number(body.targetCount) || 1), targetUnit: body.targetUnit ?? "times", color: body.color ?? "#76B852" } }); return NextResponse.json(habit); }
+export async function DELETE(_: Request, { params }: { params: { id: string } }) { const user = await getDemoUser(); await prisma.habit.deleteMany({ where: { id: params.id, userId: user.id } }); return NextResponse.json({ ok: true }); }
+export async function POST(_: Request, { params }: { params: { id: string } }) { const user = await getDemoUser(); await prisma.habit.updateMany({ where: { id: params.id, userId: user.id }, data: { archived: true } }); return NextResponse.json({ ok: true }); }
